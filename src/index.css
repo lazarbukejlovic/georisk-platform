@@ -1,0 +1,616 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700;800&display=swap');
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 223 58% 2.8%;
+    --foreground: 205 24% 92%;
+
+    --card: 221 44% 6.2%;
+    --card-foreground: 205 24% 92%;
+
+    --popover: 221 43% 5.8%;
+    --popover-foreground: 205 24% 92%;
+
+    --primary: 193 88% 67%;
+    --primary-foreground: 222 54% 5%;
+    --primary-glow: 193 90% 74%;
+
+    --secondary: 219 34% 9.4%;
+    --secondary-foreground: 205 23% 88%;
+
+    --muted: 220 28% 7.5%;
+    --muted-foreground: 212 16% 58%;
+
+    --accent: 176 80% 56%;
+    --accent-foreground: 220 50% 5%;
+
+    --destructive: 0 90% 60%;
+    --destructive-foreground: 200 25% 95%;
+
+    --border: 214 34% 14%;
+    --input: 220 34% 8%;
+    --ring: 193 88% 67%;
+
+    --radius: 0.5rem;
+
+    /* Risk semantic tokens — calibrated for dark intel UI */
+    --risk-critical: 0 95% 62%;
+    --risk-high: 16 100% 58%;
+    --risk-elevated: 38 100% 58%;
+    --risk-moderate: 44 97% 58%;
+    --risk-low: 152 75% 48%;
+
+    --positive: 152 75% 48%;
+    --negative: 0 90% 62%;
+    --info: 193 88% 62%;
+    --warning: 36 96% 58%;
+
+    /* Surfaces, gradients, shadows */
+    --surface-1: 221 42% 6.8%;
+    --surface-2: 221 36% 8.9%;
+    --surface-3: 217 28% 11.5%;
+    --surface-4: 216 22% 15%;
+
+    --gradient-hero: radial-gradient(1280px 840px at 2% -12%, hsl(193 88% 67% / 0.11), transparent 56%),
+         radial-gradient(1040px 720px at 104% 0%, hsl(176 80% 56% / 0.08), transparent 54%),
+         radial-gradient(860px 560px at 50% 112%, hsl(214 84% 55% / 0.09), transparent 56%),
+         radial-gradient(640px 420px at 80% 80%, hsl(20 92% 57% / 0.05), transparent 50%),
+         linear-gradient(180deg, hsl(223 60% 3.5%), hsl(223 62% 2.8%) 42%, hsl(224 64% 2.35%));
+    --gradient-glass: linear-gradient(160deg, hsl(219 40% 10% / 0.84), hsl(221 44% 6.5% / 0.92));
+    --gradient-panel: linear-gradient(160deg, hsl(220 40% 8%), hsl(222 46% 5.8%));
+    --gradient-panel-strong: linear-gradient(160deg, hsl(218 43% 8.8%), hsl(222 48% 5.2%));
+    --gradient-risk: linear-gradient(90deg, hsl(152 75% 48%), hsl(48 100% 58%), hsl(16 100% 58%), hsl(0 95% 62%));
+    --gradient-glow-cyan: radial-gradient(circle, hsl(193 88% 67% / 0.4), transparent 70%);
+    --gradient-glow-red: radial-gradient(circle, hsl(0 95% 60% / 0.34), transparent 70%);
+    --gradient-glow-amber: radial-gradient(circle, hsl(36 96% 58% / 0.26), transparent 70%);
+    --gradient-glow-teal: radial-gradient(circle, hsl(176 80% 56% / 0.28), transparent 70%);
+
+    --shadow-elevated: 0 1px 0 hsl(0 0% 100% / 0.035) inset, 0 24px 56px -30px hsl(220 80% 1% / 0.85);
+    --shadow-panel: 0 28px 52px -32px hsl(220 80% 1% / 0.80), 0 0 0 1px hsl(0 0% 100% / 0.025) inset;
+    --shadow-glow: 0 0 0 1px hsl(191 95% 63% / 0.25), 0 0 36px -8px hsl(191 95% 63% / 0.32);
+    --shadow-glow-red: 0 0 0 1px hsl(0 95% 60% / 0.28), 0 0 36px -6px hsl(0 95% 60% / 0.38);
+
+    /* Sidebar (icon rail) */
+    --sidebar-background: 223 72% 2.2%;
+    --sidebar-foreground: 210 14% 56%;
+    --sidebar-primary: 193 88% 67%;
+    --sidebar-primary-foreground: 222 60% 5%;
+    --sidebar-accent: 220 44% 7.5%;
+    --sidebar-accent-foreground: 200 25% 95%;
+    --sidebar-border: 220 42% 6.8%;
+    --sidebar-ring: 193 88% 67%;
+  }
+
+  .dark {
+    --background: 223 58% 2.8%;
+    --foreground: 200 24% 92%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  html, body, #root { @apply h-full; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Manrope', system-ui, sans-serif;
+    background: var(--gradient-hero);
+    background-attachment: fixed;
+    animation: ambient-drift 28s ease-in-out infinite alternate;
+    overflow-x: hidden;
+    position: relative;
+  }
+  /* Intelligence-grid texture: dual-scale crosshatch */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.09) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.09) 1px, transparent 1px),
+      linear-gradient(hsl(var(--border) / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.04) 1px, transparent 1px),
+      radial-gradient(circle at 50% 50%, hsl(var(--primary) / 0.08) 0.5px, transparent 1px);
+    background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px, 24px 24px;
+    mask-image: radial-gradient(ellipse at 50% 50%, black 25%, transparent 82%);
+    opacity: 0.55;
+    animation: grid-shift 30s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Atmospheric depth glows */
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(circle at 10% 14%, hsl(var(--primary) / 0.11), transparent 24%),
+      radial-gradient(circle at 88% 16%, hsl(var(--accent) / 0.08), transparent 22%),
+      radial-gradient(circle at 52% 90%, hsl(214 84% 55% / 0.08), transparent 24%);
+    filter: blur(36px);
+    opacity: 0.9;
+    animation: ambient-sweep 18s ease-in-out infinite alternate;
+    pointer-events: none;
+    z-index: 0;
+  }
+  #root { position: relative; z-index: 1; }
+  h1, h2, h3, h4 {
+    font-family: 'Sora', system-ui, sans-serif;
+    letter-spacing: -0.032em;
+    line-height: 1.08;
+  }
+  .font-mono, .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-feature-settings: "tnum" 1, "ss01" 1; }
+  .font-condensed { font-family: 'Barlow Condensed', system-ui, sans-serif; }
+  ::selection {
+    background: hsl(var(--primary) / 0.22);
+    color: hsl(var(--foreground));
+  }
+}
+
+@layer components {
+  /* ─── Panel surfaces ─── */
+  .panel {
+    @apply rounded-2xl border border-border/90;
+    background: var(--gradient-panel-strong);
+    box-shadow: var(--shadow-panel);
+    position: relative;
+    overflow: hidden;
+  }
+  .panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, hsl(0 0% 100% / 0.025), transparent 22%);
+    pointer-events: none;
+  }
+  .panel-flat {
+    @apply rounded-2xl border border-border/90 bg-card;
+    box-shadow: var(--shadow-elevated);
+    position: relative;
+    overflow: hidden;
+  }
+  .panel-flat::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, hsl(0 0% 100% / 0.02), transparent 30%);
+    pointer-events: none;
+  }
+  .glass {
+    @apply rounded-2xl border border-white/[0.07];
+    background: var(--gradient-glass);
+    backdrop-filter: blur(16px) saturate(148%);
+    -webkit-backdrop-filter: blur(16px) saturate(148%);
+    box-shadow: 0 1px 0 hsl(0 0% 100% / 0.04) inset, 0 28px 60px -32px hsl(220 80% 1% / 0.65);
+  }
+  .hairline { @apply border-border/70; }
+
+  /* Intel card: left accent border */
+  .intel-card {
+    @apply panel overflow-visible;
+    border-left-width: 2px;
+    transition: transform 0.22s ease;
+  }
+  .intel-card:hover { transform: translateX(2px); }
+  .intel-card.critical { border-left-color: hsl(var(--risk-critical) / 0.75); }
+  .intel-card.high { border-left-color: hsl(var(--risk-high) / 0.75); }
+  .intel-card.elevated { border-left-color: hsl(var(--risk-elevated) / 0.65); }
+  .intel-card.moderate { border-left-color: hsl(var(--risk-moderate) / 0.55); }
+  .intel-card.low { border-left-color: hsl(var(--risk-low) / 0.55); }
+
+  /* ─── Shell ─── */
+  .intel-shell { position: relative; }
+  .intel-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(112deg, transparent 24%, hsl(var(--primary) / 0.04) 42%, transparent 58%),
+      linear-gradient(292deg, transparent 30%, hsl(var(--accent) / 0.03) 48%, transparent 64%);
+    mix-blend-mode: screen;
+    animation: shell-scan 14s ease-in-out infinite;
+    z-index: 0;
+  }
+
+  /* ─── Typography ─── */
+  .eyebrow {
+    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    @apply text-muted-foreground leading-none;
+  }
+  .section-title {
+    font-family: 'Sora', system-ui, sans-serif;
+    @apply font-semibold tracking-[-0.036em] text-foreground leading-[1.04];
+  }
+  .hero-title {
+    font-family: 'Sora', system-ui, sans-serif;
+    @apply text-3xl md:text-4xl font-semibold tracking-[-0.04em] leading-[1.02] text-foreground;
+    text-wrap: balance;
+  }
+  .panel-heading {
+    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    @apply text-foreground/85;
+  }
+  .section-copy {
+    @apply text-sm leading-6 text-muted-foreground;
+  }
+  .meta-text {
+    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    @apply text-muted-foreground;
+  }
+  .data-label {
+    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.24em;
+    @apply text-muted-foreground;
+  }
+  .value-stat {
+    font-family: 'Sora', system-ui, sans-serif;
+    @apply font-semibold tracking-[-0.03em] tabular-nums;
+  }
+  .metric-label { @apply data-label; }
+
+  .hero-atmosphere {
+    @apply relative overflow-hidden rounded-2xl;
+    padding: 0.25rem 0.125rem;
+  }
+  .hero-atmosphere::before {
+    content: "";
+    position: absolute;
+    inset: -12% -8%;
+    background:
+      radial-gradient(40% 46% at 12% 14%, hsl(var(--primary) / 0.14), transparent 72%),
+      radial-gradient(34% 40% at 88% 8%, hsl(var(--accent) / 0.12), transparent 74%),
+      linear-gradient(100deg, transparent 18%, hsl(var(--primary) / 0.05) 48%, transparent 72%);
+    opacity: 0.95;
+    pointer-events: none;
+    z-index: -1;
+    animation: hero-sweep 12s ease-in-out infinite;
+  }
+  .hero-atmosphere::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 3px,
+      hsl(var(--primary) / 0.015) 3px,
+      hsl(var(--primary) / 0.015) 4px
+    );
+    pointer-events: none;
+    opacity: 0.65;
+    z-index: -1;
+  }
+
+  /* ─── Status chips ─── */
+  .terminal-pill {
+    @apply inline-flex items-center gap-2 rounded-full border border-border/80 bg-secondary/60 px-3 py-1 text-[10px] uppercase tracking-[0.16em] mono text-muted-foreground;
+  }
+  .status-chip {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/55 px-2 py-0.5 text-[10px] mono uppercase tracking-wider text-muted-foreground;
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.06) inset;
+  }
+  .live-chip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.1875rem 0.625rem;
+    border-radius: 0.375rem;
+    font-family: 'Barlow Condensed', system-ui, sans-serif;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    background: linear-gradient(90deg, hsl(var(--positive) / 0.1), hsl(var(--primary) / 0.08));
+    border: 1px solid hsl(var(--positive) / 0.28);
+    color: hsl(var(--positive));
+    overflow: hidden;
+  }
+  .live-chip::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 20%, hsl(0 0% 100% / 0.2) 48%, transparent 72%);
+    transform: translateX(-120%);
+    animation: chip-sheen 4.8s ease-in-out infinite;
+    pointer-events: none;
+  }
+  .intel-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--border)), transparent);
+  }
+
+  /* ─── Interactive ─── */
+  .panel-lift { @apply transition-all duration-300; }
+  .panel-lift:hover {
+    transform: translateY(-2px);
+    border-color: hsl(var(--primary) / 0.22);
+  }
+
+  /* ─── Grid/texture overlays ─── */
+  .grid-bg {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.5) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, #000 40%, transparent 100%);
+  }
+  .grid-bg-fine {
+    background-image:
+      linear-gradient(hsl(var(--border) / 0.28) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.28) 1px, transparent 1px),
+      linear-gradient(hsl(var(--border) / 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--border) / 0.08) 1px, transparent 1px);
+    background-size: 40px 40px, 40px 40px, 8px 8px, 8px 8px;
+  }
+
+  /* ─── Pulse markers ─── */
+  .pulse-dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full bg-[hsl(var(--positive))];
+    box-shadow: 0 0 0 0 hsl(var(--positive) / 0.6);
+    animation: pulse-ring 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  .pulse-dot.critical {
+    @apply bg-[hsl(var(--risk-critical))];
+    box-shadow: 0 0 0 0 hsl(var(--risk-critical) / 0.6);
+    animation-name: pulse-ring-red;
+  }
+  .pulse-dot.amber {
+    @apply bg-[hsl(var(--risk-elevated))];
+    box-shadow: 0 0 0 0 hsl(var(--risk-elevated) / 0.6);
+    animation-name: pulse-ring-amber;
+  }
+
+  /* ─── Market ticker colors ─── */
+  .ticker-up { @apply text-[hsl(var(--positive))]; }
+  .ticker-down { @apply text-[hsl(var(--negative))]; }
+
+  /* ─── Glow text ─── */
+  .text-glow-cyan { text-shadow: 0 0 22px hsl(195 100% 60% / 0.55); }
+  .text-glow-red { text-shadow: 0 0 22px hsl(0 95% 60% / 0.55); }
+  .text-glow-amber { text-shadow: 0 0 22px hsl(38 100% 58% / 0.5); }
+
+  /* ─── Scanline overlay ─── */
+  .scanlines { position: relative; }
+  .scanlines::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0px,
+      transparent 2px,
+      hsl(195 100% 60% / 0.016) 2px,
+      hsl(195 100% 60% / 0.016) 3px
+    );
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    z-index: 1;
+  }
+
+  /* ─── Marquee ticker ─── */
+  .marquee { display: flex; width: max-content; animation: marquee 72s linear infinite; }
+  .marquee:hover { animation-play-state: paused; }
+
+  /* ─── Radar sweep ─── */
+  .radar-sweep {
+    position: absolute; inset: 0;
+    background: conic-gradient(from 0deg, transparent 0deg, hsl(195 100% 60% / 0.07) 22deg, transparent 52deg);
+    animation: radar 9s linear infinite;
+    mix-blend-mode: screen;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* ─── Moving scan line ─── */
+  .scan-overlay { position: relative; overflow: hidden; }
+  .scan-overlay::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.3), transparent);
+    animation: scan-line 5s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* ─── Live grid ─── */
+  .live-grid { position: relative; }
+  .live-grid::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 65%, hsl(var(--primary) / 0.012), transparent);
+    pointer-events: none;
+    animation: live-breathe 9s ease-in-out infinite;
+  }
+
+  /* ─── Feed highlight ─── */
+  .feed-highlight {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.12), 0 0 36px -22px hsl(var(--primary) / 0.45);
+    animation: card-pulse 5.5s ease-in-out infinite;
+  }
+
+  /* ─── Shimmer ─── */
+  .shimmer-bg {
+    background: linear-gradient(
+      90deg,
+      hsl(var(--surface-1)) 0%,
+      hsl(var(--surface-3)) 50%,
+      hsl(var(--surface-1)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2.4s linear infinite;
+  }
+
+  /* ─── Data strip row ─── */
+  .data-strip {
+    @apply flex items-center gap-3 py-2.5 px-4 border-b border-border/60 last:border-0;
+    transition: background 0.15s ease;
+  }
+  .data-strip:hover { @apply bg-secondary/30; }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar { width: 5px; height: 5px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 3px; }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.45); }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 hsl(var(--positive) / 0.6); }
+  70% { box-shadow: 0 0 0 7px hsl(var(--positive) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--positive) / 0); }
+}
+@keyframes chip-sheen {
+  0% { transform: translateX(-120%); }
+  45%, 100% { transform: translateX(120%); }
+}
+@keyframes hero-sweep {
+  0%, 100% { transform: translateX(0) translateY(0); opacity: 0.9; }
+  50% { transform: translateX(1.4%) translateY(-0.8%); opacity: 1; }
+}
+@keyframes ambient-drift {
+  0% { background-position: 0% 0%, 100% 0%, 50% 100%, 80% 80%, 0% 0%; }
+  100% { background-position: 3% -2%, 97% 4%, 52% 98%, 82% 78%, 0% 0%; }
+}
+@keyframes ambient-sweep {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(-1.2%, 1%, 0) scale(1.04); }
+}
+@keyframes grid-shift {
+  0% { background-position: 0 0, 0 0, 0 0, 0 0, 0 0; }
+  100% { background-position: 80px 0, 0 80px, 16px 8px, 8px 16px, 24px 24px; }
+}
+@keyframes shell-scan {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+@keyframes card-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px hsl(var(--primary) / 0.12), 0 0 36px -22px hsl(var(--primary) / 0.45); }
+  50% { box-shadow: 0 0 0 1px hsl(var(--primary) / 0.2), 0 0 44px -18px hsl(var(--primary) / 0.5); }
+}
+@keyframes live-breathe {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+@keyframes pulse-ring-red {
+  0% { box-shadow: 0 0 0 0 hsl(var(--risk-critical) / 0.7); }
+  70% { box-shadow: 0 0 0 9px hsl(var(--risk-critical) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--risk-critical) / 0); }
+}
+@keyframes pulse-ring-amber {
+  0% { box-shadow: 0 0 0 0 hsl(var(--risk-elevated) / 0.7); }
+  70% { box-shadow: 0 0 0 9px hsl(var(--risk-elevated) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--risk-elevated) / 0); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes radar {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+.blink { animation: blink 1.6s ease-in-out infinite; }
+
+@keyframes dash-flow {
+  to { stroke-dashoffset: -220; }
+}
+.flow-line { stroke-dasharray: 5 7; animation: dash-flow 5.5s linear infinite; }
+
+@keyframes ping-marker {
+  0% { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(2.8); opacity: 0; }
+}
+
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.slide-up-fade { animation: slide-up-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes scan-line {
+  0% { top: 0%; opacity: 0; }
+  5% { opacity: 1; }
+  95% { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.88; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee,
+  .radar-sweep,
+  .pulse-dot,
+  .live-chip::after,
+  .blink,
+  .flow-line,
+  .slide-up-fade,
+  .scan-overlay::after,
+  .hero-atmosphere::before,
+  .live-grid::after,
+  .feed-highlight {
+    animation: none !important;
+  }
+}
+
+/* Leaflet dark intel theme overrides */
+.leaflet-container {
+  background: hsl(222 60% 3%) !important;
+  font-family: 'DM Sans', sans-serif;
+}
+.leaflet-tile { filter: invert(1) hue-rotate(180deg) brightness(0.75) contrast(1.08) saturate(0.52); }
+.leaflet-control-attribution {
+  background: hsl(222 60% 3.5% / 0.85) !important;
+  color: hsl(210 15% 55%) !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a { color: hsl(195 100% 65%) !important; }
+.leaflet-control-zoom a {
+  background: hsl(220 40% 8%) !important;
+  color: hsl(200 25% 92%) !important;
+  border-color: hsl(216 34% 13%) !important;
+}
+.leaflet-popup-content-wrapper, .leaflet-popup-tip {
+  background: hsl(220 40% 7%) !important;
+  color: hsl(200 25% 92%) !important;
+  border: 1px solid hsl(216 34% 13%);
+}
