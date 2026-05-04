@@ -1,13 +1,10 @@
-import { useEffect, useRef, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import * as d3Geo from "d3-geo";
-import { feature } from "topojson-client";
 import type { Conflict, RiskLevel } from "@/types";
 import { MAP_RISK_COLORS, RiskLegend } from "@/components/dashboard/RiskLegend";
 import { cn } from "@/lib/utils";
-
-const WORLD_DATA_URL =
-  "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json";
+import { loadWorldCountries } from "@/lib/worldAtlas";
 
 const levelOrder: RiskLevel[] = ["critical", "high", "elevated", "moderate", "low"];
 
@@ -17,38 +14,102 @@ interface GlobalRiskMapProps {
   onSelect: (conflict: Conflict) => void;
 }
 
-export function GlobalRiskMap({
+export const GlobalRiskMap = memo(function GlobalRiskMap({
   conflicts,
   selectedId,
   onSelect,
 }: GlobalRiskMapProps) {
-  const svgRef = useRef<SVGSVGElement>(null);
   const [countries, setCountries] = useState<any[] | null>(null);
 
   useEffect(() => {
-    const fetchData = async () => {
+    let mounted = true;
+
+    const loadData = async () => {
       try {
-        const response = await fetch(WORLD_DATA_URL);
-        const topology = await response.json();
-        const countriesData = feature(topology, topology.objects.countries).features;
-        setCountries(countriesData);
+        const countriesData = await loadWorldCountries();
+        if (mounted) {
+          setCountries(countriesData);
+        }
       } catch (error) {
         console.error("Failed to load world data:", error);
       }
     };
 
-    fetchData();
+    loadData();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  useEffect(() => {
-    if (!svgRef.current || !countries) return;
-    renderMap(countries, svgRef.current);
+  const projection = useMemo(() => {
+    if (!countries) {
+      return null;
+    }
+
+    return d3Geo.geoMercator().fitSize([960, 500], { type: "Sphere" });
   }, [countries]);
+
+  const geoGenerator = useMemo(() => {
+    if (!projection) {
+      return null;
+    }
+
+    return d3Geo.geoPath().projection(projection);
+  }, [projection]);
+
+  const countryPaths = useMemo(() => {
+    if (!countries || !geoGenerator) {
+      return [];
+    }
+
+    return countries
+      .map((country, idx) => ({
+        id: `map-country-${idx}`,
+        d: geoGenerator(country) || "",
+      }))
+      .filter((entry) => entry.d);
+  }, [countries, geoGenerator]);
+
+  const graticulePath = useMemo(() => {
+    if (!geoGenerator) {
+      return "";
+    }
+
+    const graticule = d3Geo.geoGraticule();
+    return geoGenerator(graticule()) || "";
+  }, [geoGenerator]);
 
   const hotspots = useMemo(
     () => [...conflicts].sort((a, b) => b.impactScore - a.impactScore).slice(0, 12),
     [conflicts],
   );
+
+  const projectedHotspots = useMemo(() => {
+    if (!projection) {
+      return [];
+    }
+
+    return hotspots
+      .map((conflict) => {
+        const [lng, lat] = [conflict.coordinates[1], conflict.coordinates[0]];
+        const point = projection([lng, lat]);
+
+        if (!point) {
+          return null;
+        }
+
+        return {
+          conflict,
+          x: point[0],
+          y: point[1],
+          color: MAP_RISK_COLORS[conflict.intensity],
+          radius: 4 + Math.floor(conflict.impactScore / 25),
+          isSelected: selectedId === conflict.id,
+        };
+      })
+      .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry));
+  }, [hotspots, projection, selectedId]);
 
   const counts = useMemo(() => {
     const base: Record<RiskLevel, number> = {
@@ -65,128 +126,6 @@ export function GlobalRiskMap({
 
     return base;
   }, [conflicts]);
-
-  const renderMap = (countriesData: any, svg: SVGSVGElement) => {
-    const width = 960;
-    const height = 500;
-
-    const projection = d3Geo.geoMercator().fitSize([width, height], {
-      type: "Sphere",
-    });
-
-    const geoGenerator = d3Geo.geoPath().projection(projection);
-
-    const pathGroup = svg.querySelector(".country-paths");
-    if (pathGroup) {
-      pathGroup.innerHTML = "";
-
-      countriesData.forEach((country: any, idx: number) => {
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", geoGenerator(country) || "");
-        path.setAttribute("fill", "hsl(203 45% 38%)");
-        path.setAttribute("stroke", "hsl(195 100% 65%)");
-        path.setAttribute("stroke-width", "0.6");
-        path.setAttribute("opacity", "0.8");
-        path.classList.add("country");
-        pathGroup.appendChild(path);
-      });
-    }
-
-    const graticule = d3Geo.geoGraticule();
-    const graticuleGroup = svg.querySelector(".graticule");
-    if (graticuleGroup) {
-      const gratPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      gratPath.setAttribute("d", geoGenerator(graticule()) || "");
-      gratPath.setAttribute("fill", "none");
-      gratPath.setAttribute("stroke", "hsl(195 100% 65%)");
-      gratPath.setAttribute("stroke-width", "0.4");
-      gratPath.setAttribute("opacity", "0.08");
-      graticuleGroup.appendChild(gratPath);
-    }
-  };
-
-  useEffect(() => {
-    if (!svgRef.current) return;
-
-    const hotspotGroup = svgRef.current.querySelector(".hotspots");
-    if (hotspotGroup) {
-      hotspotGroup.innerHTML = "";
-
-      const projection = d3Geo.geoMercator().fitSize([960, 500], {
-        type: "Sphere",
-      });
-
-      hotspots.forEach((conflict) => {
-        const [lng, lat] = [conflict.coordinates[1], conflict.coordinates[0]];
-        const [x, y] = projection([lng, lat]) || [0, 0];
-
-        if (x !== 0 || y !== 0) {
-          const color = MAP_RISK_COLORS[conflict.intensity];
-          const radius = 4 + Math.floor(conflict.impactScore / 25);
-          const isSelected = selectedId === conflict.id;
-
-          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-          g.setAttribute("transform", `translate(${x} ${y})`);
-          g.setAttribute("class", "cursor-pointer");
-          g.style.pointerEvents = "auto";
-
-          const pulseCircle = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "circle",
-          );
-          pulseCircle.setAttribute("r", String(radius + 2));
-          pulseCircle.setAttribute("fill", color);
-          pulseCircle.setAttribute("opacity", "0.3");
-          pulseCircle.setAttribute("class", "pulse-circle");
-          g.appendChild(pulseCircle);
-
-          const mainCircle = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "circle",
-          );
-          mainCircle.setAttribute("r", String(radius));
-          mainCircle.setAttribute("fill", color);
-          mainCircle.setAttribute("stroke", "hsl(222 62% 4%)");
-          mainCircle.setAttribute("stroke-width", "0.8");
-          g.appendChild(mainCircle);
-
-          const innerCircle = document.createElementNS(
-            "http://www.w3.org/2000/svg",
-            "circle",
-          );
-          innerCircle.setAttribute("r", "1.2");
-          innerCircle.setAttribute("fill", "white");
-          innerCircle.setAttribute("opacity", "0.9");
-          g.appendChild(innerCircle);
-
-          if (isSelected) {
-            const selectionRing = document.createElementNS(
-              "http://www.w3.org/2000/svg",
-              "circle",
-            );
-            selectionRing.setAttribute("r", String(radius + 6));
-            selectionRing.setAttribute("fill", "none");
-            selectionRing.setAttribute("stroke", color);
-            selectionRing.setAttribute("stroke-width", "0.8");
-            selectionRing.setAttribute("stroke-dasharray", "3 2");
-            selectionRing.setAttribute("opacity", "0.9");
-            g.appendChild(selectionRing);
-          }
-
-          g.addEventListener("click", () => onSelect(conflict));
-          g.addEventListener("mouseenter", () => {
-            pulseCircle.style.animation =
-              "mapPulse 2s cubic-bezier(0, 0, 0.2, 1) infinite";
-          });
-          g.addEventListener("mouseleave", () => {
-            pulseCircle.style.animation = "";
-          });
-
-          hotspotGroup.appendChild(g);
-        }
-      });
-    }
-  }, [hotspots, selectedId, onSelect]);
 
   return (
     <motion.section
@@ -218,36 +157,71 @@ export function GlobalRiskMap({
       <div className="relative z-10 p-4 md:p-5">
         <div className="relative overflow-hidden rounded-2xl border border-border/75 bg-[linear-gradient(145deg,hsl(219_46%_8%),hsl(223_62%_4.5%))]">
           <svg
-            ref={svgRef}
             viewBox="0 0 960 500"
             preserveAspectRatio="xMidYMid meet"
             className="w-full"
             style={{ minHeight: "380px" }}
           >
             <defs>
-              <filter id="mapGlow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                <feMerge>
-                  <feMergeNode in="coloredBlur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-              <style>{`
-                @keyframes mapPulse {
-                  0% { r: attr(r); opacity: 0.3; }
-                  50% { opacity: 0.6; }
-                  100% { r: attr(r); opacity: 0.1; }
-                }
-              `}</style>
             </defs>
 
             <rect width="960" height="500" fill="hsl(219 50% 10%)" />
 
-            <g className="graticule" opacity="0.6" />
+            {graticulePath && (
+              <g className="graticule" opacity="0.6">
+                <path
+                  d={graticulePath}
+                  fill="none"
+                  stroke="hsl(195 100% 65%)"
+                  strokeWidth="0.4"
+                  opacity="0.08"
+                />
+              </g>
+            )}
 
-            <g className="country-paths" />
+            <g className="country-paths">
+              {countryPaths.map((country) => (
+                <path
+                  key={country.id}
+                  d={country.d}
+                  fill="hsl(203 45% 38%)"
+                  stroke="hsl(195 100% 65%)"
+                  strokeWidth="0.6"
+                  opacity="0.8"
+                />
+              ))}
+            </g>
 
-            <g className="hotspots" />
+            <g className="hotspots">
+              {projectedHotspots.map((entry) => (
+                <g
+                  key={entry.conflict.id}
+                  transform={`translate(${entry.x} ${entry.y})`}
+                  className="cursor-pointer"
+                  onClick={() => onSelect(entry.conflict)}
+                >
+                  <circle
+                    r={entry.radius + 2}
+                    fill={entry.color}
+                    opacity="0.26"
+                    className="map-hotspot-pulse"
+                  />
+                  <circle r={entry.radius} fill={entry.color} stroke="hsl(222 62% 4%)" strokeWidth="0.8" />
+                  <circle r="1.2" fill="white" opacity="0.9" />
+
+                  {entry.isSelected && (
+                    <circle
+                      r={entry.radius + 6}
+                      fill="none"
+                      stroke={entry.color}
+                      strokeWidth="0.8"
+                      strokeDasharray="3 2"
+                      opacity="0.9"
+                    />
+                  )}
+                </g>
+              ))}
+            </g>
           </svg>
 
           <div className="absolute left-3 top-3 z-20 rounded-md border border-white/10 bg-black/30 px-2 py-1 font-mono text-[10px] text-foreground/70 backdrop-blur">
@@ -283,4 +257,4 @@ export function GlobalRiskMap({
       </div>
     </motion.section>
   );
-}
+});

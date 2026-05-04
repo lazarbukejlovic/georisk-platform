@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
 import type { Conflict, RiskLevel } from "@/types";
 import { MAP_RISK_COLORS, RiskLegend } from "@/components/dashboard/RiskLegend";
@@ -12,6 +12,8 @@ const project = (lat: number, lng: number) => ({
 });
 
 const levelOrder: RiskLevel[] = ["critical", "high", "elevated", "moderate", "low"];
+const HORIZONTAL_GRID_LINES = Array.from({ length: 11 }, (_, index) => index * 50);
+const VERTICAL_GRID_LINES = Array.from({ length: 21 }, (_, index) => index * 50);
 
 interface LiveRiskMapProps {
   conflicts: Conflict[];
@@ -19,7 +21,7 @@ interface LiveRiskMapProps {
   onSelect: (conflict: Conflict) => void;
 }
 
-export function LiveRiskMap({ conflicts, selectedId, onSelect }: LiveRiskMapProps) {
+export const LiveRiskMap = memo(function LiveRiskMap({ conflicts, selectedId, onSelect }: LiveRiskMapProps) {
   const hotspots = useMemo(
     () => [...conflicts].sort((a, b) => b.impactScore - a.impactScore).slice(0, 10),
     [conflicts],
@@ -82,11 +84,11 @@ export function LiveRiskMap({ conflicts, selectedId, onSelect }: LiveRiskMapProp
             </defs>
 
             <g stroke="hsl(198 86% 65% / 0.085)" strokeWidth="0.6">
-              {Array.from({ length: 11 }).map((_, index) => (
-                <line key={`h${index}`} x1="0" y1={index * 50} x2="1000" y2={index * 50} />
+              {HORIZONTAL_GRID_LINES.map((lineY) => (
+                <line key={`h${lineY}`} x1="0" y1={lineY} x2="1000" y2={lineY} />
               ))}
-              {Array.from({ length: 21 }).map((_, index) => (
-                <line key={`v${index}`} x1={index * 50} y1="0" x2={index * 50} y2="500" />
+              {VERTICAL_GRID_LINES.map((lineX) => (
+                <line key={`v${lineX}`} x1={lineX} y1="0" x2={lineX} y2="500" />
               ))}
             </g>
 
@@ -105,12 +107,11 @@ export function LiveRiskMap({ conflicts, selectedId, onSelect }: LiveRiskMapProp
                   className="cursor-pointer"
                   onClick={() => onSelect(conflict)}
                 >
-                  <motion.circle
+                  <circle
                     r={radius + 3}
                     fill={color}
-                    initial={{ opacity: 0.2, scale: 0.8 }}
-                    animate={{ opacity: [0.2, 0.55, 0.2], scale: [0.9, 1.7, 0.9] }}
-                    transition={{ duration: 2.8, repeat: Infinity, ease: "easeInOut" }}
+                    opacity="0.24"
+                    className="map-hotspot-pulse"
                   />
                   <circle r={radius} fill={color} stroke="hsl(222 62% 4%)" strokeWidth="0.9" />
                   <circle r="1.35" fill="white" opacity="0.9" />
@@ -160,4 +161,4 @@ export function LiveRiskMap({ conflicts, selectedId, onSelect }: LiveRiskMapProp
       </div>
     </motion.section>
   );
-}
+});

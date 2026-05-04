@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   AlertTriangle,
@@ -20,74 +20,88 @@ interface IntelligenceHeroProps {
   onSelect: (conflict: Conflict) => void;
 }
 
-export function IntelligenceHero({
+export const IntelligenceHero = memo(function IntelligenceHero({
   conflicts,
   selectedId,
   onSelect,
 }: IntelligenceHeroProps) {
   const summary = useMemo(() => {
-    const critical = conflicts.filter(
-      (conflict) => conflict.intensity === "critical",
-    ).length;
-    const high = conflicts.filter(
-      (conflict) => conflict.intensity === "high",
-    ).length;
-    const trackedRegions = new Set(
-      conflicts.map((conflict) => conflict.region),
-    ).size;
-    const avgImpact = Math.round(
-      conflicts.reduce((sum, conflict) => sum + conflict.impactScore, 0) /
-      Math.max(1, conflicts.length),
-    );
-    const marketShock = marketAssets.filter(
-      (asset) => Math.abs(asset.change24h) > 1.5,
-    ).length;
-    const freshAlerts = feedItems.filter(
-      (item) =>
-        Date.now() - new Date(item.timestamp).getTime() <
-        1000 * 60 * 60 * 8,
-    ).length;
+    const regions = new Set<string>();
+    let critical = 0;
+    let high = 0;
+    let impactTotal = 0;
 
-    return { critical, high, trackedRegions, avgImpact, marketShock, freshAlerts };
+    for (const conflict of conflicts) {
+      if (conflict.intensity === "critical") {
+        critical += 1;
+      }
+      if (conflict.intensity === "high") {
+        high += 1;
+      }
+      regions.add(conflict.region);
+      impactTotal += conflict.impactScore;
+    }
+
+    const marketShock = marketAssets.reduce(
+      (count, asset) => count + (Math.abs(asset.change24h) > 1.5 ? 1 : 0),
+      0,
+    );
+
+    const eightHoursAgo = Date.now() - 1000 * 60 * 60 * 8;
+    const freshAlerts = feedItems.reduce((count, item) => {
+      return count + (new Date(item.timestamp).getTime() > eightHoursAgo ? 1 : 0);
+    }, 0);
+
+    return {
+      critical,
+      high,
+      trackedRegions: regions.size,
+      avgImpact: Math.round(impactTotal / Math.max(1, conflicts.length)),
+      marketShock,
+      freshAlerts,
+    };
   }, [conflicts]);
 
-  const statCards = [
-    {
-      icon: Gauge,
-      label: "Risk Index",
-      value: `${summary.avgImpact}`,
-      detail: "Aggregate geopolitical impact score",
-      accent: "text-[#f5b84b]",
-    },
-    {
-      icon: AlertTriangle,
-      label: "Critical Zones",
-      value: `${summary.critical}`,
-      detail: "Active conflict areas requiring immediate attention",
-      accent: "text-[#ff5a5a]",
-    },
-    {
-      icon: Layers3,
-      label: "Risk Domains",
-      value: "5",
-      detail: "Energy, FX, trade, humanitarian, crypto",
-      accent: "text-[#4ca7ff]",
-    },
-    {
-      icon: CandlestickChart,
-      label: "Market Shock",
-      value: `${summary.marketShock}`,
-      detail: "Assets in elevated volatility regime",
-      accent: "text-[#f5b84b]",
-    },
-    {
-      icon: BellRing,
-      label: "Fresh Intel",
-      value: `${summary.freshAlerts}`,
-      detail: "Significant alerts in last 8 hours",
-      accent: "text-[#4ed0c0]",
-    },
-  ];
+  const statCards = useMemo(
+    () => [
+      {
+        icon: Gauge,
+        label: "Risk Index",
+        value: `${summary.avgImpact}`,
+        detail: "Aggregate geopolitical impact score",
+        accent: "text-[#f5b84b]",
+      },
+      {
+        icon: AlertTriangle,
+        label: "Critical Zones",
+        value: `${summary.critical}`,
+        detail: "Active conflict areas requiring immediate attention",
+        accent: "text-[#ff5a5a]",
+      },
+      {
+        icon: Layers3,
+        label: "Risk Domains",
+        value: "5",
+        detail: "Energy, FX, trade, humanitarian, crypto",
+        accent: "text-[#4ca7ff]",
+      },
+      {
+        icon: CandlestickChart,
+        label: "Market Shock",
+        value: `${summary.marketShock}`,
+        detail: "Assets in elevated volatility regime",
+        accent: "text-[#f5b84b]",
+      },
+      {
+        icon: BellRing,
+        label: "Fresh Intel",
+        value: `${summary.freshAlerts}`,
+        detail: "Significant alerts in last 8 hours",
+        accent: "text-[#4ed0c0]",
+      },
+    ],
+    [summary.avgImpact, summary.critical, summary.freshAlerts, summary.marketShock],
+  );
 
   return (
     <section className="space-y-6">
@@ -160,4 +174,4 @@ export function IntelligenceHero({
       </motion.div>
     </section>
   );
-}
+});

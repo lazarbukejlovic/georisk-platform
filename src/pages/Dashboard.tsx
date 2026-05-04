@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { conflicts } from "@/data/conflicts";
 import { feedItems } from "@/data/feed";
@@ -18,18 +18,75 @@ const RISK_HSL: Record<string, string> = {
   low: "186 58% 55%",
 };
 
+const CHANGE_ITEMS = [
+  {
+    icon: TrendingUp,
+    color: "ticker-up",
+    title: "Brent risk premium +1.4%",
+    sub: "Geopolitical spread widens on Red Sea",
+  },
+  {
+    icon: AlertTriangle,
+    color: "text-[hsl(var(--risk-critical))]",
+    title: "Eastern Europe escalation",
+    sub: "Energy infrastructure incidents expand",
+  },
+  {
+    icon: TrendingDown,
+    color: "ticker-down",
+    title: "BTC -2.1% on risk-off",
+    sub: "Drawdown amid global risk repricing",
+  },
+  {
+    icon: HeartPulse,
+    color: "text-[hsl(var(--risk-high))]",
+    title: "Sahel displacement +6% MoM",
+    sub: "Tri-border outflows accelerate",
+  },
+  {
+    icon: Eye,
+    color: "text-primary",
+    title: "New analyst note · IL/HM",
+    sub: "Mediation track resumes; watch energy",
+  },
+] as const;
+
 export default function Dashboard() {
   const [selected, setSelected] = useState<Conflict | null>(null);
   const [open, setOpen] = useState(false);
 
-  const select = (conflict: Conflict) => {
+  const select = useCallback((conflict: Conflict) => {
     setSelected(conflict);
     setOpen(true);
-  };
+  }, []);
+
+  const conflictsById = useMemo(
+    () => new Map(conflicts.map((conflict) => [conflict.id, conflict])),
+    [],
+  );
 
   const feedHighlights = useMemo(
     () => feedItems.filter((item) => item.isPinned || item.severity === "critical").slice(0, 1),
     [],
+  );
+
+  const nonCriticalFeed = useMemo(
+    () => feedItems.filter((item) => item.severity !== "critical"),
+    [],
+  );
+
+  const onFeedItemClick = useCallback(
+    (conflictId?: string) => {
+      if (!conflictId) {
+        return;
+      }
+
+      const conflict = conflictsById.get(conflictId);
+      if (conflict) {
+        select(conflict);
+      }
+    },
+    [conflictsById, select],
   );
 
   return (
@@ -77,19 +134,10 @@ export default function Dashboard() {
           ))}
 
           <ul className="scrollbar-thin max-h-[420px] divide-y divide-border/50 overflow-y-auto">
-            {feedItems
-              .filter((item) => item.severity !== "critical")
-              .map((item, index) => (
+            {nonCriticalFeed.map((item, index) => (
                 <li
                   key={item.id}
-                  onClick={() => {
-                    if (item.conflictId) {
-                      const conflict = conflicts.find((entry) => entry.id === item.conflictId);
-                      if (conflict) {
-                        select(conflict);
-                      }
-                    }
-                  }}
+                  onClick={() => onFeedItemClick(item.conflictId)}
                   className={cn(
                     "scan-overlay group flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors hover:bg-secondary/35",
                     (item.isNew || index === 0) && "feed-highlight",
@@ -139,38 +187,7 @@ export default function Dashboard() {
             </div>
           </div>
           <ul className="divide-y divide-border/50">
-            {[
-              {
-                icon: TrendingUp,
-                color: "ticker-up",
-                title: "Brent risk premium +1.4%",
-                sub: "Geopolitical spread widens on Red Sea",
-              },
-              {
-                icon: AlertTriangle,
-                color: "text-[hsl(var(--risk-critical))]",
-                title: "Eastern Europe escalation",
-                sub: "Energy infrastructure incidents expand",
-              },
-              {
-                icon: TrendingDown,
-                color: "ticker-down",
-                title: "BTC -2.1% on risk-off",
-                sub: "Drawdown amid global risk repricing",
-              },
-              {
-                icon: HeartPulse,
-                color: "text-[hsl(var(--risk-high))]",
-                title: "Sahel displacement +6% MoM",
-                sub: "Tri-border outflows accelerate",
-              },
-              {
-                icon: Eye,
-                color: "text-primary",
-                title: "New analyst note · IL/HM",
-                sub: "Mediation track resumes; watch energy",
-              },
-            ].map((item, index) => {
+            {CHANGE_ITEMS.map((item, index) => {
               const Icon = item.icon;
               return (
                 <li

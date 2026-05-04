@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { motion } from "framer-motion";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,7 @@ interface DashboardStatCardProps {
   index?: number;
 }
 
-export function DashboardStatCard({
+export const DashboardStatCard = memo(function DashboardStatCard({
   icon: Icon,
   label,
   value,
@@ -26,7 +27,8 @@ export function DashboardStatCard({
       whileTap={{ scale: 0.98 }}
       transition={{ duration: 0.2 }}
       initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.2 }}
       style={{ transitionDelay: `${index * 45}ms` }}
     >
       <div className="absolute inset-0 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
@@ -52,4 +54,4 @@ export function DashboardStatCard({
       <p className="relative z-10 mt-3 text-xs leading-5 text-foreground/66">{detail}</p>
     </motion.article>
   );
-}
+});
